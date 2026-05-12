@@ -27,11 +27,14 @@ async def create_task(
     priority: str = "Medium",
     task_type: str = "po",
     milestone_id: int | None = None,
+    start_date: str | None = None,
+    due_date: str | None = None,
 ) -> dict[str, Any]:
     """새 태스크 생성. epic_key는 service의 jira_epic_key.
 
     task_type: qa | planning | design | po
     priority: Highest | High | Medium | Low | Lowest
+    start_date / due_date: YYYY-MM-DD (옵셔널, 생성과 동시에 일정 지정)
     """
     if task_type not in VALID_TASK_TYPES:
         raise ValueError(f"task_type 은 {VALID_TASK_TYPES} 중 하나여야 합니다.")
@@ -44,6 +47,8 @@ async def create_task(
             "priority": priority,
             "task_type": task_type,
             "milestone_id": milestone_id,
+            "start_date": start_date,
+            "due_date": due_date,
         },
     )
 

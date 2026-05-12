@@ -9,15 +9,27 @@ from ..client import request
 BASE = "/api/v1/milestones"
 
 
-async def list_milestone_tasks(milestone_id: int) -> dict[str, Any]:
+async def list_milestone_tasks(
+    milestone_id: int,
+    due_before: str | None = None,
+    due_after: str | None = None,
+    status_in: str | None = None,
+) -> dict[str, Any]:
     """특정 마일스톤에 소속된 태스크 목록 + 마일스톤 메타데이터.
 
-    "OOO 마일스톤의 일정 정리해줘" 같은 자연어 요청을 처리할 때 사용.
-    반환: { milestone: {id, service_key, name, status}, tasks: [{issue_key, summary,
-    status, assignee, task_type, priority, start_date, due_date, fix_version, is_backlog,
-    pm_memo, done_comment}, ...] }
+    "OOO 마일스톤의 일정 정리해줘", "이번 주 마감 태스크" 같은 요청에 사용.
+
+    due_before / due_after: YYYY-MM-DD. 지난 마감(due_before=오늘) 또는 미래 일정(due_after=오늘).
+    status_in: 쉼표 구분 상태 필터 (예: '해야 할 일,진행 중').
     """
-    return await request("GET", f"{BASE}/{milestone_id}/tasks")
+    params: dict[str, Any] = {}
+    if due_before:
+        params["due_before"] = due_before
+    if due_after:
+        params["due_after"] = due_after
+    if status_in:
+        params["status_in"] = status_in
+    return await request("GET", f"{BASE}/{milestone_id}/tasks", params=params or None)
 
 
 async def list_milestones(service_key: str) -> list[dict[str, Any]]:
