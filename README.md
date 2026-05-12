@@ -27,12 +27,12 @@ PM Dashboard(MediSolveAI 사내) 의 마일스톤·태스크를 **Claude Code** 
 
 ### 옵션 A — GitHub에서 직접
 ```bash
-pip install git+https://github.com/MediSolveAIDev/pm-dashboard-mcp.git
+pip install git+https://github.com/SeyunJeong/pm-dashboard-mcp.git
 ```
 
 ### 옵션 B — 로컬 클론
 ```bash
-git clone https://github.com/MediSolveAIDev/pm-dashboard-mcp.git
+git clone https://github.com/SeyunJeong/pm-dashboard-mcp.git
 cd pm-dashboard-mcp
 pip install -e .
 ```
