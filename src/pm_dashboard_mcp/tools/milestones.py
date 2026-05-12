@@ -13,7 +13,7 @@ async def list_milestone_tasks(milestone_id: int) -> dict[str, Any]:
     """특정 마일스톤에 소속된 태스크 목록 + 마일스톤 메타데이터.
 
     "OOO 마일스톤의 일정 정리해줘" 같은 자연어 요청을 처리할 때 사용.
-    반환: { milestone: {id, service_key, name, status}, tasks: [{jira_issue_key, summary,
+    반환: { milestone: {id, service_key, name, status}, tasks: [{issue_key, summary,
     status, assignee, task_type, priority, start_date, due_date, fix_version, is_backlog,
     pm_memo, done_comment}, ...] }
     """

@@ -14,7 +14,7 @@ VALID_TASK_TYPES = ("qa", "planning", "design", "po")
 async def get_task(issue_key: str) -> dict[str, Any]:
     """태스크 상세 조회.
 
-    반환 필드: jira_issue_key, epic_key, service_key, summary, status, assignee,
+    반환 필드: issue_key, epic_key, service_key, summary, status, assignee,
     fix_version, start_date, due_date, priority, pm_memo, task_type, milestone_id,
     milestone_name, done_comment, label_ids.
     """
