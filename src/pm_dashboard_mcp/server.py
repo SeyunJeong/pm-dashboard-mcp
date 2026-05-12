@@ -23,6 +23,7 @@ mcp.tool()(discovery.get_service_tasks)
 
 # ── 마일스톤 ───────────────────────────────────────────────────
 mcp.tool()(milestones.list_milestones)
+mcp.tool()(milestones.list_milestone_tasks)
 mcp.tool()(milestones.create_milestone)
 mcp.tool()(milestones.update_milestone)
 mcp.tool()(milestones.delete_milestone)
