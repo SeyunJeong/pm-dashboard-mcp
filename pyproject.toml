@@ -1,6 +1,6 @@
 [project]
 name = "pm-dashboard-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "PM Dashboard MCP 서버 — Claude Code에서 마일스톤·태스크 CRUD"
 readme = "README.md"
 requires-python = ">=3.10"

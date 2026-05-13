@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
-from .tools import discovery, labels, milestones, tasks
+from .tools import discovery, labels, milestones, subtasks, tasks
 
 mcp = FastMCP("pm-dashboard")
 
@@ -43,6 +43,17 @@ mcp.tool()(tasks.update_task_type)
 mcp.tool()(tasks.update_task_backlog)
 mcp.tool()(tasks.update_task_memo)
 mcp.tool()(tasks.update_task_done_comment)
+
+# ── 하위작업 / 서브태스크 / 체크리스트 (모두 동일) ─────────────
+mcp.tool()(subtasks.list_subtasks)
+mcp.tool()(subtasks.add_subtask)
+mcp.tool()(subtasks.update_subtask)
+mcp.tool()(subtasks.delete_subtask)
+# 별칭: checklist 이름으로도 호출 가능하게 동일 함수를 재등록
+mcp.tool(name="list_checklist")(subtasks.list_subtasks)
+mcp.tool(name="add_checklist_item")(subtasks.add_subtask)
+mcp.tool(name="update_checklist_item")(subtasks.update_subtask)
+mcp.tool(name="delete_checklist_item")(subtasks.delete_subtask)
 
 # ── 라벨 ───────────────────────────────────────────────────────
 mcp.tool()(labels.list_labels)

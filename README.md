@@ -4,7 +4,7 @@ PM Dashboard(MediSolveAI 사내) 의 마일스톤·태스크를 **Claude Code** 
 
 > 본 패키지는 PM Dashboard REST API를 호출하는 얇은 래퍼입니다. 비즈니스 로직·DB 스키마는 포함되어 있지 않습니다.
 
-- 버전: **0.1.0**
+- 버전: **0.2.0**
 - 요구사항: Python **3.10+**, 활성화된 PM Dashboard 계정 + API 토큰
 - 라이선스: MIT
 
@@ -24,6 +24,14 @@ PM Dashboard(MediSolveAI 사내) 의 마일스톤·태스크를 **Claude Code** 
 - `update_task_summary` (제목), `update_task_status`, `update_task_dates`
 - `update_task_assignee`, `update_task_milestone`, `update_task_type`
 - `update_task_backlog`, `update_task_memo`, `update_task_done_comment`
+
+### 하위작업 / 서브태스크 / 체크리스트
+태스크 내부의 체크리스트 항목을 다룹니다. 동일 핸들러를 두 이름으로 노출하므로 어떤 표현으로 부르든 매칭됩니다.
+
+- `list_subtasks` (별칭 `list_checklist`) — 항목 목록 (id, content, is_checked, due_date, sort_order)
+- `add_subtask` (별칭 `add_checklist_item`) — 새 항목 추가 (content 필수, description/due_date 선택)
+- `update_subtask` (별칭 `update_checklist_item`) — 내용 수정 + **체크/언체크 토글** (`is_checked=true/false`)
+- `delete_subtask` (별칭 `delete_checklist_item`) — 삭제 (`delete_task` 권한 필요)
 
 ### 라벨
 - `list_labels`, `create_label`, `update_label`, `delete_label`
@@ -46,6 +54,23 @@ pip install -e .
 ```
 
 설치 후 `pm-dashboard-mcp` 실행 파일이 PATH에 등록됩니다.
+
+## 업데이트
+
+이미 설치한 사용자가 새 버전을 받는 방법은 설치 방식에 따라 다릅니다.
+
+| 설치 방식 | 업데이트 명령 |
+|---|---|
+| `pip install git+...` | `pip install --upgrade --force-reinstall --no-deps git+https://github.com/SeyunJeong/pm-dashboard-mcp.git` |
+| `pipx install git+...` | `pipx install --force git+https://github.com/SeyunJeong/pm-dashboard-mcp.git` |
+| `git clone` + `pip install -e .` | 리포에서 `git pull` 만 — editable이라 코드 즉시 반영 |
+
+> **공통 마지막 단계**: Claude Code(또는 다른 MCP 클라이언트)를 **재시작**하세요. MCP 서버는 클라이언트가 stdio로 띄워 캐시하기 때문에, 코드만 갱신해서는 살아있는 세션에 새 도구가 붙지 않습니다.
+
+버전 확인:
+```bash
+pip show pm-dashboard-mcp | grep ^Version
+```
 
 ## 토큰 발급
 
@@ -97,6 +122,9 @@ claude mcp add pm-dashboard \
 > ATCS-123을 진행 중으로 옮기고, 담당자를 김대정으로
 > ATCS-456 완료 처리하고 코멘트 "QA 완료, 배포함" 추가
 > "Q1 출시" 마일스톤 완료 처리
+> ATCS-123에 "디자인 QA" 하위작업 추가해줘
+> ATCS-123 체크리스트 보여줘
+> ATCS-123 체크리스트 3번 항목 체크 처리
 ```
 
 ## 권한
