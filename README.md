@@ -1,116 +1,71 @@
 # PM Dashboard MCP
 
-PM Dashboard(MediSolveAI 사내) 의 마일스톤·태스크를 **Claude Code** 등 MCP 클라이언트에서 자연어로 조작할 수 있게 해주는 MCP 서버.
+PM Dashboard(메디솔브 사내) 의 마일스톤·태스크를 **Claude Code** 등 MCP 클라이언트에서 자연어로 조작할 수 있게 해주는 MCP 서버.
 
-> 본 패키지는 PM Dashboard REST API를 호출하는 얇은 래퍼입니다. 비즈니스 로직·DB 스키마는 포함되어 있지 않습니다.
+> **이 리포는 코드 미러입니다.** 실제 서버는 PM Dashboard 백엔드에 mount 된 streamable-http MCP 엔드포인트로 운영됩니다. 본 리포의 `src/pm_dashboard/mcp_server/` 는 본체 리포(`SeyunJeong/pm-dashboard`, private)에서 자동 동기화됩니다.
 
-- 버전: **0.2.0**
-- 요구사항: Python **3.10+**, 활성화된 PM Dashboard 계정 + API 토큰
+- 엔드포인트: `https://mcp.morgenai.news/mcp/`
+- 인증: Bearer 토큰 (`ppdash_...`, PM Dashboard 웹에서 발급)
+- 프로토콜: MCP streamable-http (1.27.x)
 - 라이선스: MIT
 
-## 노출되는 도구
+## 등록 (Claude Code)
 
-### 탐색 (read-only)
-- `list_services` — 서비스 목록 (service_key, jira_epic_key 등 식별 정보)
-- `get_service_tasks` — 서비스 상세 (current / roadmap / backlog / completed 태스크 일괄)
-- `list_milestone_tasks` — 특정 마일스톤의 태스크 + 메타데이터. `due_before` / `due_after` (YYYY-MM-DD), `status_in` (쉼표 구분) 필터 지원
+`~/.claude.json`:
 
-### 마일스톤
-- `list_milestones`, `create_milestone`, `update_milestone`
-- `delete_milestone` (권한 필요), `close_milestone` / `reopen_milestone` (권한 필요)
-
-### 태스크
-- `get_task`, `create_task`, `delete_task` (권한 필요)
-- `update_task_summary` (제목), `update_task_status`, `update_task_dates`
-- `update_task_assignee`, `update_task_milestone`, `update_task_type`
-- `update_task_backlog`, `update_task_memo`, `update_task_done_comment`
-
-### 하위작업 / 서브태스크 / 체크리스트
-태스크 내부의 체크리스트 항목을 다룹니다. 동일 핸들러를 두 이름으로 노출하므로 어떤 표현으로 부르든 매칭됩니다.
-
-- `list_subtasks` (별칭 `list_checklist`) — 항목 목록 (id, content, is_checked, due_date, sort_order)
-- `add_subtask` (별칭 `add_checklist_item`) — 새 항목 추가 (content 필수, description/due_date 선택)
-- `update_subtask` (별칭 `update_checklist_item`) — 내용 수정 + **체크/언체크 토글** (`is_checked=true/false`)
-- `delete_subtask` (별칭 `delete_checklist_item`) — 삭제 (`delete_task` 권한 필요)
-
-### 라벨
-- `list_labels`, `create_label`, `update_label`, `delete_label`
-- `get_task_labels`, `add_label_to_task`, `remove_label_from_task`
-
-서비스 자체 CRUD(생성·수정·삭제)는 의도적으로 제외했습니다.
-
-## 설치
-
-### 옵션 A — GitHub에서 직접 (권장)
-```bash
-pip install git+https://github.com/SeyunJeong/pm-dashboard-mcp.git
-```
-
-### 옵션 B — 로컬 클론
-```bash
-git clone https://github.com/SeyunJeong/pm-dashboard-mcp.git
-cd pm-dashboard-mcp
-pip install -e .
-```
-
-설치 후 `pm-dashboard-mcp` 실행 파일이 PATH에 등록됩니다.
-
-## 업데이트
-
-이미 설치한 사용자가 새 버전을 받는 방법은 설치 방식에 따라 다릅니다.
-
-| 설치 방식 | 업데이트 명령 |
-|---|---|
-| `pip install git+...` | `pip install --upgrade --force-reinstall --no-deps git+https://github.com/SeyunJeong/pm-dashboard-mcp.git` |
-| `pipx install git+...` | `pipx install --force git+https://github.com/SeyunJeong/pm-dashboard-mcp.git` |
-| `git clone` + `pip install -e .` | 리포에서 `git pull` 만 — editable이라 코드 즉시 반영 |
-
-> **공통 마지막 단계**: Claude Code(또는 다른 MCP 클라이언트)를 **재시작**하세요. MCP 서버는 클라이언트가 stdio로 띄워 캐시하기 때문에, 코드만 갱신해서는 살아있는 세션에 새 도구가 붙지 않습니다.
-
-버전 확인:
-```bash
-pip show pm-dashboard-mcp | grep ^Version
-```
-
-## 토큰 발급
-
-1. PM Dashboard 웹에 로그인 (운영: https://pm.morgenai.news, 또는 로컬)
-2. 우측 상단 프로필 클릭 → **API 토큰** 메뉴
-3. **발급** 클릭 → 표시된 `ppdash_...` 토큰을 즉시 복사 (재표시 불가)
-
-> 분실 시 동일 페이지에서 **재발급** — 기존 토큰은 자동 무효화됩니다.
-
-## 환경 변수
-
-| 이름 | 필수 | 기본값 | 설명 |
-|------|:--:|--------|------|
-| `PM_DASHBOARD_TOKEN` | ✅ | — | 발급받은 사용자 토큰 (`ppdash_...`) |
-| `PM_DASHBOARD_API_URL` | | `http://49.50.128.163:8000` | 백엔드 API 베이스 URL. 로컬 개발 시 `http://localhost:8000` |
-
-## Claude Code 등록
-
-CLI 한 줄:
-```bash
-claude mcp add pm-dashboard \
-  -e PM_DASHBOARD_TOKEN=ppdash_xxx \
-  -- pm-dashboard-mcp
-```
-
-또는 `~/.claude.json` 직접 편집:
 ```json
 {
   "mcpServers": {
     "pm-dashboard": {
-      "command": "pm-dashboard-mcp",
-      "env": {
-        "PM_DASHBOARD_TOKEN": "ppdash_xxx"
+      "type": "http",
+      "url": "https://mcp.morgenai.news/mcp/",
+      "headers": {
+        "Authorization": "Bearer ppdash_xxx"
       }
     }
   }
 }
 ```
 
-로컬 백엔드를 가리키려면 `env`에 `PM_DASHBOARD_API_URL`도 같이 넣어주세요.
+Claude Code 재시작하면 36개 도구가 노출됩니다. **Python·pip·SSH 설치 불필요.**
+
+## 토큰 발급
+
+1. PM Dashboard 웹 (https://pm.morgenai.news) 로그인
+2. 우측 상단 프로필 → **API 토큰** → **발급**
+3. 표시된 `ppdash_...` 즉시 복사 (재표시 불가, 분실 시 재발급)
+
+> 사용자별 1개 토큰만 활성. 재발급 시 기존 무효.
+
+## 노출 도구 (36개)
+
+### 탐색 (2)
+- `list_services` — 등록 서비스 요약 (마일스톤·태스크 카운트, 신호등)
+- `get_service_tasks` — 서비스 상세 (current / roadmap / backlog / completed)
+
+### 마일스톤 (7)
+- `list_milestones`, `list_milestone_tasks` (`due_before` / `due_after` / `status_in` 필터)
+- `create_milestone`, `update_milestone`
+- `delete_milestone` (`delete_milestone` 권한)
+- `close_milestone` / `reopen_milestone` (`milestone_complete` 권한)
+
+### 태스크 (12)
+- `get_task`, `create_task`, `delete_task` (`delete_task` 권한)
+- `update_task_summary` (제목), `update_task_status`, `update_task_dates`
+- `update_task_assignee`, `update_task_milestone`, `update_task_type`
+- `update_task_backlog`, `update_task_memo`, `update_task_done_comment`
+
+### 하위작업 / 체크리스트 (4 + 4 별칭)
+- `list_subtasks` (별칭 `list_checklist`)
+- `add_subtask` (별칭 `add_checklist_item`)
+- `update_subtask` (별칭 `update_checklist_item`) — `is_checked` 로 체크/해제
+- `delete_subtask` (별칭 `delete_checklist_item`)
+
+### 라벨 (7)
+- `list_labels`, `create_label`, `update_label`, `delete_label`
+- `get_task_labels`, `add_label_to_task`, `remove_label_from_task`
+
+서비스 자체 CRUD(생성·수정·삭제)는 의도적으로 제외.
 
 ## 사용 예시 (Claude Code)
 
@@ -123,47 +78,49 @@ claude mcp add pm-dashboard \
 > ATCS-456 완료 처리하고 코멘트 "QA 완료, 배포함" 추가
 > "Q1 출시" 마일스톤 완료 처리
 > ATCS-123에 "디자인 QA" 하위작업 추가해줘
-> ATCS-123 체크리스트 보여줘
 > ATCS-123 체크리스트 3번 항목 체크 처리
 ```
 
 ## 권한
 
-요청은 토큰 발급자 본인의 권한으로 처리됩니다. 일부 도구는 추가 권한이 필요합니다.
-
 | 도구 | 필요 권한 |
-|------|----------|
+|---|---|
 | `delete_milestone` | `delete_milestone` |
 | `close_milestone` / `reopen_milestone` | `milestone_complete` |
-| `delete_task` | `delete_task` |
+| `delete_task` / `delete_subtask` | `delete_task` |
 
-ADMIN 계정은 모든 권한이 자동 부여됩니다. 권한이 없으면 호출 시 `[403] ...권한이 없습니다` 응답이 반환됩니다.
+ADMIN 계정은 자동 부여. 권한 없으면 호출 시 `[403] ...권한이 없습니다` 응답.
 
 ## 보안 노트
 
-- 토큰은 SHA-256 해시로 DB에 저장되며 평문은 발급 직후 1회만 노출됩니다.
-- 사용자별 1개 토큰만 활성화됩니다 (재발급 시 기존 무효).
-- 모든 변경 작업은 `audit_logs`에 기록됩니다 (토큰 사용자 정보 포함).
+- 토큰은 SHA-256 해시로 DB 저장. 평문은 발급 직후 1회만 노출.
+- 모든 변경 작업은 `audit_logs` 에 기록 (토큰 사용자 정보 포함).
+- 토큰 분실 시 즉시 PM Dashboard 웹에서 재발급 (기존 자동 무효).
+
+## 피드백 / 기여
+
+- **Issues** — 도구 동작 이슈, 자연어 인식 어색함, 도구 추가 제안 등 환영합니다.
+- **Pull Requests** — 받아서 본체 리포에 반영 후 다음 동기화에 자동 반영됩니다. (이 리포는 자동 미러라 PR 을 직접 머지하지는 않습니다.)
+
+PR 작성 시 어느 도구 / 어느 service 함수 영향인지 명시해주세요.
 
 ## 트러블슈팅
 
 | 증상 | 확인 |
-|------|------|
-| `PM_DASHBOARD_TOKEN 환경변수가 비어있습니다` | Claude Code 설정의 `env`에 토큰이 들어있는지, 셸에서 직접 실행 시 export 되었는지 확인 |
-| `[401] 토큰이 유효하지 않습니다` | 재발급되었을 가능성. 대시보드에서 재발급 후 클라이언트 설정 갱신 |
-| `[403] ...권한이 없습니다` | ADMIN/권한 페이지에서 해당 권한 부여 |
-| 연결 실패 / timeout | `PM_DASHBOARD_API_URL` 확인 (사내망 / VPN 필요 여부) |
+|---|---|
+| `로그인이 필요합니다` (401) | `Authorization` 헤더에 Bearer 토큰 있는지, 토큰이 `ppdash_` 로 시작하는지 |
+| `토큰이 유효하지 않습니다` (401) | 다른 곳에서 재발급됐을 가능성. 대시보드에서 재발급 후 config 갱신 |
+| `...권한이 없습니다` (403) | ADMIN 또는 권한 페이지에서 해당 권한 부여 |
+| `Invalid Host header` (421) | 보통 reverse-proxy 설정 이슈. 운영자에게 문의 |
+| 연결 실패 | `mcp.morgenai.news` HTTPS 가 사내망에서 닿는지 확인 |
 
-## 개발
+## 변경 이력
 
-```bash
-pip install -e .
-PM_DASHBOARD_API_URL=http://localhost:8000 \
-PM_DASHBOARD_TOKEN=ppdash_xxx \
-  pm-dashboard-mcp
-```
+- **v0.3.0 (2026-05-13)** — stdio → HTTP transport 전환. `pip install` 폐기. mcp.morgenai.news/mcp/ 엔드포인트로 통일.
+- v0.2.0 — 하위작업/체크리스트 CRUD 4개 + 별칭 4개 추가
+- v0.1.0 — 초기 stdio 패키지 (하위작업/체크리스트 CRUD 4개 + 별칭 4개 추가)
 
-서버는 STDIO transport로 동작합니다 — 단독 실행 시 입력 대기 상태가 정상.
+> stdio 방식 사용 이력이 있다면 `~/.claude.json` 의 `pm-dashboard` 블록을 위 HTTP 방식으로 교체하세요. `pip uninstall pm-dashboard-mcp` 로 옛 패키지 정리는 선택.
 
 ## 라이선스
 
