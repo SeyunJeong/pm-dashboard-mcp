@@ -7,13 +7,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
+import json
 
 from mcp.server.fastmcp import FastMCP
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from pm_dashboard.mcp_server import context
 from pm_dashboard.mcp_server.tools import (
@@ -77,24 +74,45 @@ mcp.tool()(labels.add_label_to_task)
 mcp.tool()(labels.remove_label_from_task)
 
 
-class _UserContextMiddleware(BaseHTTPMiddleware):
-    """Bearer 인증 결과를 ContextVar 로 옮기고, 인증 없으면 401."""
+class _UserContextASGI:
+    """본체 AuthMiddleware 가 채운 api_user 를 ContextVar 로 옮긴다.
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        user = getattr(request.state, "api_user", None)
+    Pure ASGI 미들웨어 — BaseHTTPMiddleware 가 streamable-http 응답 헤더(특히
+    Content-Type) 를 잃어버리는 케이스를 피하기 위해 직접 scope 를 다룬다.
+    인증되지 않은 요청은 본체 AuthMiddleware 에서 이미 401 로 끊긴다.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        state = scope.get("state")
+        user = getattr(state, "api_user", None) if state is not None else None
         if user is None:
-            return JSONResponse(
+            body = json.dumps(
                 {"detail": "Bearer 토큰 인증이 필요합니다 (Authorization: Bearer ppdash_...)."},
-                status_code=401,
-            )
-        allowed = getattr(request.state, "api_allowed_pages", []) or []
+                ensure_ascii=False,
+            ).encode("utf-8")
+            await send({
+                "type": "http.response.start",
+                "status": 401,
+                "headers": [
+                    (b"content-type", b"application/json; charset=utf-8"),
+                    (b"www-authenticate", b'Bearer realm="pm-dashboard"'),
+                    (b"content-length", str(len(body)).encode()),
+                ],
+            })
+            await send({"type": "http.response.body", "body": body})
+            return
+
+        allowed = getattr(state, "api_allowed_pages", None) or []
         tokens = context.set_request_context(user, list(allowed))
         try:
-            return await call_next(request)
+            await self.app(scope, receive, send)
         finally:
             context.reset_request_context(tokens)
 
@@ -105,7 +123,4 @@ def build_mcp_app() -> ASGIApp:
     호출 후 mcp.session_manager 가 사용 가능해진다.
     실제 동작을 위해서는 본체 lifespan 에서 `async with mcp.session_manager.run():` 진입 필수.
     """
-    inner: ASGIApp = mcp.streamable_http_app()
-    # Starlette 앱이라 add_middleware 사용 가능
-    inner.add_middleware(_UserContextMiddleware)
-    return inner
+    return _UserContextASGI(mcp.streamable_http_app())
