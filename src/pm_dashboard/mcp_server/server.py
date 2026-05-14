@@ -90,8 +90,13 @@ class _UserContextASGI:
             await self.app(scope, receive, send)
             return
 
+        # AuthMiddleware 가 scope dict 에 직접 박아준 키를 우선 사용.
+        # request.state 경로는 BaseHTTPMiddleware ↔ Mount 사이에서 손실되는
+        # 케이스가 있어 폴백 용도로만 둔다.
         state = scope.get("state")
-        user = getattr(state, "api_user", None) if state is not None else None
+        user = scope.get("api_user") or (
+            getattr(state, "api_user", None) if state is not None else None
+        )
         if user is None:
             body = json.dumps(
                 {"detail": "Bearer 토큰 인증이 필요합니다 (Authorization: Bearer ppdash_...)."},
@@ -109,7 +114,9 @@ class _UserContextASGI:
             await send({"type": "http.response.body", "body": body})
             return
 
-        allowed = getattr(state, "api_allowed_pages", None) or []
+        allowed = scope.get("api_allowed_pages") or (
+            getattr(state, "api_allowed_pages", None) if state is not None else None
+        ) or []
         tokens = context.set_request_context(user, list(allowed))
         try:
             await self.app(scope, receive, send)
